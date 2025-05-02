@@ -66,8 +66,8 @@ RUN cd /src/php-src && emcc $OPTIMIZE \
         -o /src/phpw.o \
         -s ERROR_ON_UNDEFINED_SYMBOLS=0
 RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
-    -o /build/php-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
-    -gseparate-dwarf=/build/php-$WASM_ENVIRONMENT.debug.wasm \
+    -o /build/app-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
+    -gseparate-dwarf=/build/app-$WASM_ENVIRONMENT.debug.wasm \
     -s EXPORTED_FUNCTIONS='["_phpw_with_args"]' \
     -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "UTF8ToString", "lengthBytesUTF8", "FS"]' \
     -s ENVIRONMENT=$WASM_ENVIRONMENT    \
@@ -88,4 +88,4 @@ RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
 RUN rm -r /src/*
 
 FROM scratch
-COPY --from=php-wasm /build/ .
+COPY --from=php-wasm /build/ app/

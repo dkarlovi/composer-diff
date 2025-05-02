@@ -334,7 +334,7 @@
         </script>
         {% if wasm ?? false %}
             <script type="module">
-                import php from "./build/php-web.mjs";
+                import php from "./app/app-web.mjs";
 
                 document.addEventListener('DOMContentLoaded', async () => {
                     const buffer = [];

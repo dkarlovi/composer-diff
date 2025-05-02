@@ -11,5 +11,6 @@ if ('POST' === $_SERVER['REQUEST_METHOD']) {
 
 
 echo (new Twig())->render('index.html.twig', [
+    'wasm' => true, 
     'result' => $result ?? null,
 ]);

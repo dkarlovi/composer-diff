@@ -1,5 +1,4 @@
 FROM emscripten/emsdk:3.1.35 AS build_tool
-
 RUN apt-get update && \
   apt-get --no-install-recommends -y install \
     build-essential \
@@ -33,7 +32,6 @@ ARG OPTIMIZE=-O1
 # TODO: find a way to keep this, it can't be empty if defined...
 # ARG PRE_JS=
 ARG INITIAL_MEMORY=256mb
-
 RUN cd /src/php-src && ./buildconf --force \
     && emconfigure ./configure \
         --enable-embed=static \
@@ -56,7 +54,6 @@ RUN cd /src/php-src && ./buildconf --force \
         --with-config-file-scan-dir=/src/php  \
         --enable-tokenizer
 RUN cd /src/php-src && emmake make -j8
-# PHP7 outputs a libphp7 whereas php8 a libphp
 RUN cd /src/php-src && bash -c '[[ -f .libs/libphp7.la ]] && mv .libs/libphp7.la .libs/libphp.la && mv .libs/libphp7.a .libs/libphp.a && mv .libs/libphp7.lai .libs/libphp.lai || exit 0'
 COPY ./source /src/source
 RUN cd /src/php-src && emcc $OPTIMIZE \
@@ -70,7 +67,7 @@ RUN cd /src/php-src && emcc $OPTIMIZE \
         -s ERROR_ON_UNDEFINED_SYMBOLS=0
 RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
     -o /build/php-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
-    --llvm-lto 2                     \
+    -gseparate-dwarf=/build/php-$WASM_ENVIRONMENT.debug.wasm \
     -s EXPORTED_FUNCTIONS='["_phpw_with_args"]' \
     -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "UTF8ToString", "lengthBytesUTF8", "FS"]' \
     -s ENVIRONMENT=$WASM_ENVIRONMENT    \

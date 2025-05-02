@@ -56,6 +56,11 @@ RUN cd /src/php-src && ./buildconf --force \
 RUN cd /src/php-src && emmake make -j8
 RUN cd /src/php-src && bash -c '[[ -f .libs/libphp7.la ]] && mv .libs/libphp7.la .libs/libphp.la && mv .libs/libphp7.a .libs/libphp.a && mv .libs/libphp7.lai .libs/libphp.lai || exit 0'
 COPY ./source /src/source
+COPY ./data /app/data
+COPY ./vendor /app/vendor
+COPY ./templates /app/templates
+COPY ./public/index.php /app/public/index.php
+COPY ./src /app/src
 RUN cd /src/php-src && emcc $OPTIMIZE \
         -I .     \
         -I Zend  \
@@ -83,6 +88,7 @@ RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
     -s EXPORT_ES6=$EXPORT_ES6 \
     -s EXPORT_NAME=$EXPORT_NAME \
     # -s DECLARE_ASM_MODULE_EXPORTS=0 \
+    --embed-file /app@/app \
     -lidbfs.js                       \
         /src/phpw.o .libs/libphp.a
 RUN rm -r /src/*

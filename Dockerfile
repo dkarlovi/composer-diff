@@ -1,4 +1,8 @@
-FROM emscripten/emsdk:3.1.35 AS build_tool
+ARG COMPOSER_DOCKER_IMAGE=composer/composer:2.8.7
+ARG PHP_DOCKER_IMAGE=php:8.3.0-cli-alpine
+ARG PHP_BRANCH=8.3.0
+
+FROM emscripten/emsdk:3.1.35 AS sdk
 RUN apt-get update && \
   apt-get --no-install-recommends -y install \
     build-essential \
@@ -14,14 +18,14 @@ RUN apt-get update && \
     pv \
     re2c
 
-FROM build_tool AS php_src
-ARG PHP_BRANCH=PHP-8.3.0
+FROM sdk AS php-src
+ARG PHP_BRANCH
 RUN git clone https://github.com/php/php-src.git php-src \
-        --branch $PHP_BRANCH \
+        --branch PHP-$PHP_BRANCH \
         --single-branch \
         --depth 1
 
-FROM php_src AS php-wasm
+FROM php-src AS php-bin
 ARG WASM_ENVIRONMENT=web
 ARG JAVASCRIPT_EXTENSION=mjs
 ARG EXPORT_NAME=createPhpModule
@@ -32,44 +36,58 @@ ARG OPTIMIZE=-O1
 # TODO: find a way to keep this, it can't be empty if defined...
 # ARG PRE_JS=
 ARG INITIAL_MEMORY=256mb
-RUN cd /src/php-src && ./buildconf --force \
+RUN cd /src/php-src \
+    && ./buildconf --force \
     && emconfigure ./configure \
+        --with-config-file-scan-dir=/src/php \
+        --with-layout=GNU \
         --enable-embed=static \
-        --with-layout=GNU  \
-        --disable-cgi      \
-        --disable-cli      \
+        --enable-ctype \
+        --enable-filter \
+        --enable-json \
+        --enable-mbstring \
+        --enable-session \
+        --enable-tokenizer \
+        --enable-posix \
+        --disable-all \
+        --disable-cgi \
+        --disable-cli \
         --disable-fiber-asm \
-        --disable-all      \
-        --enable-session   \
-        --enable-filter    \
-        --disable-rpath    \
-        --disable-phpdbg   \
-        --without-pear     \
-        --with-valgrind=no \
+        --disable-mbregex \
+        --disable-rpath \
+        --disable-phpdbg \
         --without-pcre-jit \
-        --enable-json      \
-        --enable-ctype     \
-        --enable-mbstring  \
-        --disable-mbregex  \
-        --with-config-file-scan-dir=/src/php  \
-        --enable-tokenizer
-RUN cd /src/php-src && emmake make -j8
+        --without-pear \
+        --with-valgrind=no
+RUN cd /src/php-src && emmake make -j8 
 RUN cd /src/php-src && bash -c '[[ -f .libs/libphp7.la ]] && mv .libs/libphp7.la .libs/libphp.la && mv .libs/libphp7.a .libs/libphp.a && mv .libs/libphp7.lai .libs/libphp.lai || exit 0'
+# TODO: this could be a shim directly in the Dockerfile
 COPY ./source /src/source
-COPY ./data /app/data
-COPY ./vendor /app/vendor
-COPY ./templates /app/templates
-COPY ./public/index.php /app/public/index.php
-COPY ./src /app/src
 RUN cd /src/php-src && emcc $OPTIMIZE \
         -I .     \
         -I Zend  \
         -I main  \
         -I TSRM/ \
-        -c \
-        /src/source/phpw.c \
+        -c /src/source/phpw.c \
         -o /src/phpw.o \
         -s ERROR_ON_UNDEFINED_SYMBOLS=0
+
+FROM ${COMPOSER_DOCKER_IMAGE} AS composer
+
+FROM ${PHP_DOCKER_IMAGE} AS php-deps
+COPY --from=composer /usr/bin/composer /usr/bin/composer
+COPY composer.* /app/
+# these lines are separated by design to allow changing the vendor before building the classmap
+RUN --mount=type=cache,target=/composer COMPOSER_HOME=/composer cd /app && /usr/bin/composer install --no-autoloader --no-dev --no-interaction --no-scripts --prefer-dist
+COPY ./src /app/src
+RUN --mount=type=cache,target=/composer COMPOSER_HOME=/composer cd /app && /usr/bin/composer dump-autoload --classmap-authoritative
+
+FROM php-bin AS php-wasm
+COPY --from=php-deps /app/vendor /app/vendor
+COPY --from=php-deps /app/src /app/src
+COPY ./templates /app/templates
+COPY ./data /app/data
+COPY ./public/index.php /app/public/index.php
 RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
     -o /build/app-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
     -gseparate-dwarf=/build/app-$WASM_ENVIRONMENT.debug.wasm \

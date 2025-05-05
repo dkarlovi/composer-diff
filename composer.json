@@ -12,8 +12,8 @@
     "require": {
         "ion-bazan/composer-diff": "^1.12",
         "composer/composer": "^2.8.8",
-        "symfony/var-dumper": "^7.2.3",
-        "twig/twig": "^3.20",
+        "symfony/var-dumper": "^7.2.6",
+        "twig/twig": "^3.21.1",
         "symfony/twig-bridge": "^7.2.5"
     },
     "autoload": {
@@ -28,5 +28,8 @@
         "bump-after-update": true,
         "optimize-autoloader": true,
         "sort-packages": true
+    },
+    "require-dev": {
+        "shipmonk/dead-code-detector": "^0.11.0"
     }
 }

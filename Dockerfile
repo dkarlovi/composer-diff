@@ -90,22 +90,22 @@ RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
     -o /build/app-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
     -gseparate-dwarf=/build/app-$WASM_ENVIRONMENT.debug.wasm \
     -s EXPORTED_FUNCTIONS='["_phpw_with_args"]' \
-    -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "UTF8ToString", "lengthBytesUTF8", "FS"]' \
-    -s ENVIRONMENT=$WASM_ENVIRONMENT    \
-    -s FORCE_FILESYSTEM=1            \
-    -s MAXIMUM_MEMORY=2gb             \
+    -s EXPORTED_RUNTIME_METHODS='["ccall", "UTF8ToString", "lengthBytesUTF8", "FS"]' \
+    -s ENVIRONMENT=$WASM_ENVIRONMENT \
+    -s FORCE_FILESYSTEM=1 \
+    -s MAXIMUM_MEMORY=2gb \
     -s INITIAL_MEMORY=$INITIAL_MEMORY \
-    -s ALLOW_MEMORY_GROWTH=1         \
-    -s ASSERTIONS=$ASSERTIONS      \
-    -s ERROR_ON_UNDEFINED_SYMBOLS=0  \
-    -s MODULARIZE=$MODULARIZE        \
-    -s INVOKE_RUN=0                  \
-    -s LZ4=1                  \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s ASSERTIONS=$ASSERTIONS \
+    -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
+    -s MODULARIZE=$MODULARIZE \
+    -s INVOKE_RUN=0 \
+    -s LZ4=1 \
     -s EXPORT_ES6=$EXPORT_ES6 \
     -s EXPORT_NAME=$EXPORT_NAME \
     # -s DECLARE_ASM_MODULE_EXPORTS=0 \
     --embed-file /app@/app \
-    -lidbfs.js                       \
+    -lidbfs.js \
         /src/phpw.o .libs/libphp.a
 RUN rm -r /src/*
 

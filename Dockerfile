@@ -1,6 +1,6 @@
-ARG COMPOSER_DOCKER_IMAGE=composer/composer:2.8.7
-ARG PHP_DOCKER_IMAGE=php:8.3.0-cli-alpine
-ARG PHP_BRANCH=8.3.0
+ARG COMPOSER_DOCKER_IMAGE=composer/composer:2.8.8-bin
+ARG PHP_DOCKER_IMAGE=php:8.4.6-cli-alpine
+ARG PHP_BRANCH=8.4.6
 
 FROM emscripten/emsdk:3.1.35 AS sdk
 RUN apt-get update && \
@@ -75,19 +75,17 @@ RUN cd /src/php-src && emcc $OPTIMIZE \
 FROM ${COMPOSER_DOCKER_IMAGE} AS composer
 
 FROM ${PHP_DOCKER_IMAGE} AS php-deps
-COPY --from=composer /usr/bin/composer /usr/bin/composer
+COPY --from=composer /composer /usr/bin/composer
 COPY composer.* /app/
-# these lines are separated by design to allow changing the vendor before building the classmap
 RUN --mount=type=cache,target=/composer COMPOSER_HOME=/composer cd /app && /usr/bin/composer install --no-autoloader --no-dev --no-interaction --no-scripts --prefer-dist
 COPY ./src /app/src
+COPY ./data /app/data
+COPY ./templates /app/templates
+COPY ./public/index.php /app/public/index.php
 RUN --mount=type=cache,target=/composer COMPOSER_HOME=/composer cd /app && /usr/bin/composer dump-autoload --classmap-authoritative
 
 FROM php-bin AS php-wasm
-COPY --from=php-deps /app/vendor /app/vendor
-COPY --from=php-deps /app/src /app/src
-COPY ./templates /app/templates
-COPY ./data /app/data
-COPY ./public/index.php /app/public/index.php
+COPY --from=php-deps /app /app
 RUN mkdir /build && cd /src/php-src && emcc $OPTIMIZE \
     -o /build/app-$WASM_ENVIRONMENT.$JAVASCRIPT_EXTENSION \
     -gseparate-dwarf=/build/app-$WASM_ENVIRONMENT.debug.wasm \
